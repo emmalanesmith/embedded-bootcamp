@@ -19,6 +19,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "spi.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -65,6 +67,9 @@ void SystemClock_Config(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
+	uint8_t txDataBuffer[3] = {0x01, 0x80, 0x00}; // 0b1, 0b10000000, 0b0 to hex
+	uint8_t rxDataBuffer[3];
+	uint32_t minPeriod = __HAL_TIM_GET_AUTORELOAD(&htim1)*0.05;
 
   /* USER CODE END 1 */
 
@@ -87,14 +92,29 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
+  MX_SPI1_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
-
+  	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_SET); // set CS to high
+  	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, minPeriod); // set compare register to 5%
+  	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_RESET); // pull down CS
+	 HAL_SPI_TransmitReceive(&hspi1,txDataBuffer, rxDataBuffer, 3, HAL_MAX_DELAY);
+	 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_SET);
+
+	 uint16_t receivedData = (rxDataBuffer[1] << 8) | rxDataBuffer[2]; //combine both bytes
+	 receivedData = addData & 0x3FF; // 0b0000011111111111 to hex
+
+	 int dutyCycle = minPeriod + (receivedData / 1023.0)*minPeriod; //convert to timer count, 5-10%
+	 __HAL_TIME_SET_COMPARE(&htim1, TIM_CHANNEL_1, dutyCycle);
+
+	 HAL_Delay(10);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
