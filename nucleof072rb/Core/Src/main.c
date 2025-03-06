@@ -70,7 +70,6 @@ int main(void)
 	uint8_t txDataBuffer[3] = {0x01, 0x80, 0x00}; // 0b1, 0b10000000, 0b0 to hex
 	uint8_t rxDataBuffer[3];
 	uint32_t minPeriod = __HAL_TIM_GET_AUTORELOAD(&htim1)*0.05;
-
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
